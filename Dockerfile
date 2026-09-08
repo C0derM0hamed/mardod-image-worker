@@ -22,7 +22,10 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Baked so cold starts never download. The lite (swin-tiny) variant is 214 MB against 928 MB for
 # full birefnet-general; upgrade by changing this line and REMBG_MODEL together, then rebuilding.
-RUN python3 -c "from rembg import new_session; new_session('birefnet-general-lite')"
+# The provider is pinned to CPU here only to fetch the weights: the build runs on a GPU-less CI
+# runner, and letting onnxruntime-gpu initialise CUDA at build time segfaults. At runtime the
+# handler creates the session with the default providers, which selects CUDA.
+RUN python3 -c "from rembg import new_session; new_session('birefnet-general-lite', providers=['CPUExecutionProvider'])"
 
 COPY handler.py ./
 
