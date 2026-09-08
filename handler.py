@@ -42,6 +42,15 @@ def _session(model: str):
     return _sessions[model]
 
 
+def _providers(session) -> list:
+    """ONNX Runtime execution providers actually in use, so a response proves whether the GPU is
+    really being used rather than us assuming it from the image tag."""
+    try:
+        return list(session.inner_session.get_providers())
+    except Exception:  # noqa: BLE001 - diagnostics must never break a job
+        return []
+
+
 def _decode(b64: str) -> Image.Image:
     image = Image.open(io.BytesIO(base64.b64decode(b64)))
     image.load()
@@ -55,14 +64,15 @@ def _encode(image: Image.Image, fmt: str, **kwargs) -> str:
     return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
-def remove_background(source: Image.Image, model: str) -> Image.Image:
+def remove_background(source: Image.Image, model: str) -> tuple:
     from rembg import remove
 
     source = source.convert("RGB")
     if max(source.size) > MAX_SOURCE_SIDE:
         source.thumbnail((MAX_SOURCE_SIDE, MAX_SOURCE_SIDE), Image.LANCZOS)
-    cutout = remove(source, session=_session(model), post_process_mask=True)
-    return _trim(cutout.convert("RGBA"))
+    session = _session(model)
+    cutout = remove(source, session=session, post_process_mask=True)
+    return _trim(cutout.convert("RGBA")), _providers(session)
 
 
 def _trim(cutout: Image.Image) -> Image.Image:
@@ -121,8 +131,9 @@ def handler(job: dict) -> dict:
 
     if payload.get("source_b64"):
         t = time.perf_counter()
-        cutout = remove_background(_decode(payload["source_b64"]), model)
+        cutout, providers = remove_background(_decode(payload["source_b64"]), model)
         timings["remove_ms"] = int((time.perf_counter() - t) * 1000)
+        result["providers"] = providers
         result["cutout_b64"] = _encode(cutout, "PNG", optimize=True)
     elif payload.get("cutout_b64"):
         cutout = _trim(_decode(payload["cutout_b64"]).convert("RGBA"))

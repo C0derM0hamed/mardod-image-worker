@@ -1,5 +1,5 @@
 runpod==1.7.9
-rembg==2.0.67
+rembg[gpu]==2.0.67
 pillow==11.1.0
 numpy<2.3
-onnxruntime==1.20.1
+onnxruntime-gpu==1.20.2
