@@ -33,7 +33,7 @@ jobs:
           # Published under mardod-worker: a package created fresh from this now-public repo
           # inherits public visibility, whereas an existing private package keeps its own setting.
           tags: |
-            ghcr.io/c0derm0hamed/mardod-worker:1.1.0-gpu
+            ghcr.io/c0derm0hamed/mardod-worker:1.2.0-gpu
             ghcr.io/c0derm0hamed/mardod-worker:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
